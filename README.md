@@ -333,7 +333,7 @@ It works across all .NET ADO providers including SQL Server, MySQL, Firebird, Po
 
 
 ## Examples
-You can see :eyes: and learn :green_book: from the test project [Dazzler.Test](https://github.com/suntorch/Dazzler/tree/master/Dazzler.Test)
+You can see :eyes: and learn :green_book: from the test project [Dazzler.Test](https://github.com/suntorch/Dazzler.Wiki/tree/main/Dazzler.Test)
 
 
 
