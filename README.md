@@ -6,6 +6,8 @@ Dazzler is a NuGet data access library that extends IDbConnection interface.
 - lightweight and high performance. :rocket: 
 - mapping a query result :scroll: to **`strongly-typed`** object.
 - 2-way binding :link: a class property to **`input`** and **`output`** parameters.
+- parameterized execution, fetching, and paging.
+- dependency injection :syringe: for .Net Core apps and more...
 
 
 
@@ -278,13 +280,7 @@ The use cases can be as follows:
 -  :speech_balloon: to accept/reject a query execution in centralized code base.
 
 
-### Execution Event Implementation
-
-Let's implement a storing all database operation into the DBLog table.
-Please be aware of when we execute any database operation from the event 
-method, the execution must not trigger an events. Otherwise, it will 
-cause deadly recursive call for the event method and it will never end.
-Set **`noevent=true`**
+### Event Declaration
 
 ```C#
 // in program starts
@@ -295,14 +291,34 @@ Mapper.ExecutedEvent += Mapper_ExecutedEvent;
 Mapper.ExecutingEvent -= Mapper_ExecutingEvent;
 Mapper.ExecutedEvent -= Mapper_ExecutedEvent;
 
-// event pre-execution method
+
+// pre-execution event method
 private void Mapper_ExecutingEvent(CommandEventArgs args)
 {
-   // the event function will be invoked when a command is coming to execute.
-   Console.WriteLine("Executing {0}: {1}", args.Kind, args.Sql);
+  ...
 }
 
-// event post-execution method
+// post-execution event method
+private void Mapper_ExecutedEvent(CommandEventArgs args, ResultInfo result)
+{
+  ...
+}
+```
+
+
+### Event Implementation - Example #1. To record a log.
+
+Let's implement a storing all database operation into the DBLog table,
+after execution completes.
+Please be aware of when we execute any database operation from an event 
+method, the execution must not trigger events. Otherwise, it will 
+cause deadly recursive call for the event method and it will never end.
+
+Set **`noevent=true`** to disable a triggering events.
+
+
+```C#
+// this will be invoked after the execution completes.
 private void Mapper_ExecutedEvent(CommandEventArgs args, ResultInfo result)
 {
    var param = new
@@ -326,6 +342,64 @@ private void Mapper_ExecutedEvent(CommandEventArgs args, ResultInfo result)
 }
 ```
 
+```TSQL
+CREATE TABLE DBLog
+(
+   Started datetime NULL,
+   Kind int NULL,
+   Sql varchar(4000) NULL,
+   Duration int NULL,
+   Rows int NULL
+)
+```
+
+### Event Implementation - Example #2. To control database operation.
+Let's implement some database policy to stop any database change operation
+such as update, insert, delete. Let's assume that all those operations use 
+a non-query execution method.
+
+
+So, we need a state object to pass to execution method and events.
+A state object can be defined as DatabaseControl class as shown below.
+```C#
+   public class DatabaseControl
+   {
+      public bool StopNonQuery { get; set; }
+   }
+```
+
+Somewhere we manage a state data, for example,
+it could be in the BaseController or as global variable.
+```C#
+   // this is user state object to pass to events to control an operation.
+   DatabaseControl dbc = new DatabaseControl();
+   dbc.StopNonQuery = true;
+```
+
+When we execute the non-query command, the state object needs to be passed.
+```C#
+   // passes the state object to non-query execution.
+   string sql = "delete from Customer where Id=@Id"
+   var result = connection.NonQuery(CommandType.Text, sql, new { Id = 1 }, state: dbc);
+```
+
+When the event gets invoked, we can cancel the execution if it's a non-query.
+```C#
+// the event function will be invoked when a command is coming to execute.
+private void Mapper_ExecutingEvent(CommandEventArgs args)
+{
+   // test our logic to CANCEL the execution based on state data.
+   DatabaseControl dbc = (DatabaseControl)args.State;
+   if (dbc.StopNonQuery && args.ExecutionType == ExecutionType.NonQuery) 
+      args.Cancel = true;
+}
+```
+
+
+## DbContext
+DbContext class can be used to work with Dependency Injection Container or any other class instance usage.
+
+
 
 ## DB providers can be used
 It works across all .NET ADO providers including SQL Server, MySQL, Firebird, PostgreSQL and Oracle.
@@ -333,14 +407,14 @@ It works across all .NET ADO providers including SQL Server, MySQL, Firebird, Po
 
 
 ## Examples
-You can see :eyes: and learn :green_book: from the test project [Dazzler.Test](https://github.com/suntorch/Dazzler.Wiki/tree/main/Dazzler.Test)
+You can see :eyes: and learn :green_book: from the test project [Dazzler.Test](https://github.com/suntorch/Dazzler/tree/master/Dazzler.Test)
 
 
 
 ## Installation
 Please use the following command in the NuGet Package Manager Console to install the library.
 ```
-Install-Package SunTorch.Dazzler -Version 1.2.3
+Install-Package SunTorch.Dazzler -Version 1.2.4
 ```
 
 Happy coding! 
