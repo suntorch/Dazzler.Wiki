@@ -399,7 +399,65 @@ private void Mapper_ExecutingEvent(CommandEventArgs args)
 ## DbContext
 DbContext class can be used to work with Dependency Injection Container or any other class instance usage.
 
+### ASP.NET Core Dependency Injection
+In the below example, SqlContext abstract class is defined just for configuring database type that we want to use. 
+Then it will be used to declare any DbContext class. In this case it defined to use SqlConnection of the SqlServer.
+```C#
+public abstract class SqlContext : DbContext
+{
+    public SqlContext() : base(new SqlConnection()) { }
+}
+```
 
+Now let's do actual DBContext class that contains stored procedures.
+In the constructor method will bring DbContextIOptions object that is configured in AddDazzler method.
+```C#
+public class CustomerDbContext : SqlContext
+{
+   public CustomerDbContext(DbContextOptions options) : base() => this.DbConnection.ConnectionString = options.ConnectionString;
+
+   // mapped stored procedures
+   public List<CustomerSearchResult> CustomerSearch(CustomerSearchArgs args) => this.Query<CustomerSearchResult>(args);
+   public int CustomerUpdate(CustomerUpdateArgs args) => this.NonQuery(args);
+}
+```
+
+AddDazzler method allows you to register your DbContext class to the scopped service container in the pipeline. 
+```C#
+public void ConfigureServices(IServiceCollection services)
+{
+   ...
+   services.AddDazzler<CustomerDbContext>(options => options.ConnectionString = Configuration["AppSettings:ConnectionString"]);
+   ...
+}
+```
+Now we can use our DbContext in the conroller classes, defining CustomerDbContext class type in the constructor method 
+in order to get it from service container. That's it. Now you are able to SP mapped functions in your controller.
+```C#
+[Route("[controller]")]
+[ApiController]
+public class CustomerController : ControllerBase
+{
+   private CustomerDbContext _customerDbContext;
+   
+   public UserController(CustomerDbContext customerDbContext)
+   {
+      _customerDbContext = customerDbContext;
+   }
+   
+   public IActionResult SearchCustomers()
+   {
+      var args = new CustomerSearchArgs
+      {
+         FirstName = "John",
+         LastName = "Doe"
+      };
+
+      var result = _customerDbContext.CustomerSearch(args);
+      return Ok(result);
+   }
+}
+```
 
 ## DB providers can be used
 It works across all .NET ADO providers including SQL Server, MySQL, Firebird, PostgreSQL and Oracle.
