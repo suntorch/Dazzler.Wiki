@@ -400,29 +400,29 @@ private void Mapper_ExecutingEvent(CommandEventArgs args)
 DbContext class can be used to work with Dependency Injection Container or any other class instance usage.
 
 ### ASP.NET Core Dependency Injection
-In the below example, SqlContext abstract class is defined just for configuring database type that we want to use. 
-Then it will be used to declare any DbContext class. In this case it defined to use SqlConnection of the SqlServer.
+Let's create SqlContext abstract class that defines the database type that we want to use
+and pass the connection string that is configured in the DbContextOptions. Here SqlServer is used.
+Then this class will be used to create any DbContext class.
 ```C#
 public abstract class SqlContext : DbContext
 {
-    public SqlContext() : base(new SqlConnection()) { }
+    public SqlContext(DbContextOptions options) : base(new SqlConnection()) => this.DbConnection.ConnectionString = options.ConnectionString;
 }
 ```
 
-Now let's do actual DBContext class that contains stored procedures.
-In the constructor method will bring DbContextIOptions object that is configured in AddDazzler method.
+Now let's do actual DBContext class that contains methods that are mapped to the database stored procedures.
+Mapping is so simple, just give same name with a stored procedure to your method that you are mapping.
+Or, you can specify stored procedure's name in the query function arguments.
 ```C#
 public class CustomerDbContext : SqlContext
 {
-   public CustomerDbContext(DbContextOptions options) : base() => this.DbConnection.ConnectionString = options.ConnectionString;
-
    // mapped stored procedures
    public List<CustomerSearchResult> CustomerSearch(CustomerSearchArgs args) => this.Query<CustomerSearchResult>(args);
    public int CustomerUpdate(CustomerUpdateArgs args) => this.NonQuery(args);
 }
 ```
 
-AddDazzler method allows you to register your DbContext class to the scopped service container in the pipeline. 
+IServiceCollection.AddDazzler method allows you to register your DbContext class to the scopped service container. 
 ```C#
 public void ConfigureServices(IServiceCollection services)
 {
@@ -431,8 +431,8 @@ public void ConfigureServices(IServiceCollection services)
    ...
 }
 ```
-Now we can use our DbContext in the conroller classes, defining CustomerDbContext class type in the constructor method 
-in order to get it from service container. That's it. Now you are able to SP mapped functions in your controller.
+Now it's ready to use our DbContext in the controller classes defining CustomerDbContext class type in the constructor method 
+in order to get it from service container. That's it. Now you are able to call mapped methods in your controller.
 ```C#
 [Route("[controller]")]
 [ApiController]
