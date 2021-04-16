@@ -397,12 +397,13 @@ private void Mapper_ExecutingEvent(CommandEventArgs args)
 
 
 ## DbContext
-DbContext class can be used to work with Dependency Injection Container or any other class instance usage.
+DbContext class can be used to work with Dependency Injection Container in .NET Core environment or any other instance usage.
+The below example describes how to use DbContext in the ASP.NET Core web application.
 
 ### ASP.NET Core Dependency Injection
-Let's create SqlContext abstract class that defines the database type that we want to use
-and pass the connection string that is configured in the DbContextOptions. Here SqlServer is used.
-Then this class will be used to create any DbContext class.
+First, let's create SqlContext abstract class that defines the IDbConnection type 
+and passes the connection string that is configured in the DbContextOptions.
+Then this class will be used to create a DbContext class.
 ```C#
 public abstract class SqlContext : DbContext
 {
@@ -410,9 +411,9 @@ public abstract class SqlContext : DbContext
 }
 ```
 
-Now let's do actual DBContext class that contains methods that are mapped to the database stored procedures.
-Mapping is so simple, just give same name with a stored procedure to your method that you are mapping.
-Or, you can specify stored procedure's name in the query function arguments.
+Now let's do actual DBContext class with methods that are mapped to the database stored procedures.
+Mapping is so simple, just give same name with a stored procedure to your method.
+Or, you can specify the name in the arguments of the query function.
 ```C#
 public class CustomerDbContext : SqlContext
 {
@@ -422,7 +423,8 @@ public class CustomerDbContext : SqlContext
 }
 ```
 
-IServiceCollection.AddDazzler method allows you to register your DbContext class to the scopped service container. 
+IServiceCollection.AddDazzler method allows you to register your DbContext class to the scopped service container
+along with DbContextOptions.
 ```C#
 public void ConfigureServices(IServiceCollection services)
 {
